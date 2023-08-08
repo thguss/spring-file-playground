@@ -1,11 +1,9 @@
 package com.practice.file.controller;
 
-import java.io.IOException;
-import java.time.LocalDateTime;
-import java.util.UUID;
+import static java.util.Objects.*;
 
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.HttpStatus;
+import java.io.IOException;
+
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -13,8 +11,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
-import com.amazonaws.services.s3.AmazonS3Client;
-import com.amazonaws.services.s3.model.ObjectMetadata;
+import com.practice.file.service.FileService;
 
 import lombok.RequiredArgsConstructor;
 
@@ -23,31 +20,13 @@ import lombok.RequiredArgsConstructor;
 @RequestMapping("/api/v1/file")
 public class FileController {
 
-	private final AmazonS3Client amazonS3Client;
-
-	@Value("${cloud.aws.s3.bucket}")
-	private String bucket;
+	private final FileService fileService;
 
 	@PostMapping
-	public ResponseEntity<String> uploadFile(@RequestParam("file") MultipartFile file) {
-		try {
-			String fileName = getRandomFileName(file.getOriginalFilename());
-
-			ObjectMetadata metadata = new ObjectMetadata();
-			metadata.setContentType(file.getContentType());
-			metadata.setContentLength(file.getSize());
-
-			amazonS3Client.putObject(bucket, fileName, file.getInputStream(), metadata);
-			String url = amazonS3Client.getUrl(bucket, fileName).toString();
-
-			return ResponseEntity.ok(url);
-		} catch (IOException e) {
-			e.printStackTrace();
-			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
-		}
-	}
-
-	private String getRandomFileName(String fileName) {
-		return "test" + ":" + LocalDateTime.now() + ":" + UUID.randomUUID() + ":" + fileName;
+	public ResponseEntity<String> uploadFile(
+		@RequestParam(name = "file", required = false) MultipartFile file
+	) throws IOException {
+		String response = nonNull(file) ? fileService.uploadFile(file) : "업로드할 파일 없음";
+		return ResponseEntity.ok(response);
 	}
 }
